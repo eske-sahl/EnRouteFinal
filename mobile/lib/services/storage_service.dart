@@ -15,6 +15,8 @@ class StorageService {
   static const String keyTickets = 'sbk_tickets_v1';
   static const String keyTransactions = 'sbk_transactions_v1';
   static const String keyReviews = 'sbk_reviews_v1';
+  static const String keyExpenses = 'sbk_expenses_v1';
+  static const String keyLostItems = 'sbk_lost_items_v1';
   static const String keyHasSeenSplash = 'sbk_has_seen_splash_v1';
   static const String keyUserSession = 'sbk_user_session_v1';
   static const String keyCustomServerUrl = 'sbk_custom_server_url_v1';

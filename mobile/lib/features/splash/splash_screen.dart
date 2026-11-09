@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
       'title': 'Instant QR & Smart Wallet',
       'malayalamTitle': 'വേഗത്തിലുള്ള ക്യുആർ ടിക്കറ്റിംഗും വാലറ്റും',
       'description':
-          'Board buses without the hassle of physical change. Present your personal passenger QR code, manage your digital wallet, and avail 50%+ student & senior concessions.',
+          'Board buses without the hassle of physical change. Present your secure dynamic passenger QR code, manage your digital wallet, and avail student concessions as per Kerala Stage Carriage fare notifications.',
       'icon': Icons.qr_code_scanner_rounded,
       'accentColor': const Color(0xFF3B82F6),
       'tags': ['Passenger QR', 'Digital Wallet', 'Concessions'],

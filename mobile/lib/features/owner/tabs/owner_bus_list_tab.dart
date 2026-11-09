@@ -26,6 +26,8 @@ class _OwnerBusListTabState extends State<OwnerBusListTab> {
       return const Color(0xFFC62828);
     } else if (category.contains('Blue') || category.contains('Ordinary')) {
       return const Color(0xFF1565C0);
+    } else if (category.contains('Yellow') || category.contains('Rural') || category.contains('Gramavandi')) {
+      return const Color(0xFFF57F17);
     } else {
       return const Color(0xFF2E7D32);
     }
@@ -197,6 +199,16 @@ class _OwnerBusListTabState extends State<OwnerBusListTab> {
                                 Icon(Icons.circle, color: Color(0xFF2E7D32), size: 14),
                                 SizedBox(width: 8),
                                 Text('City Bus (Green-Whiteline)', style: TextStyle(fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Rural Feeder / Gramavandi (Yellow-Whiteline)',
+                            child: Row(
+                              children: [
+                                Icon(Icons.circle, color: Color(0xFFF57F17), size: 14),
+                                SizedBox(width: 8),
+                                Text('Rural Feeder / Gramavandi (Yellow-Whiteline)', style: TextStyle(fontSize: 13)),
                               ],
                             ),
                           ),
@@ -1027,7 +1039,7 @@ class _OwnerBusListTabState extends State<OwnerBusListTab> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'This vehicle is pending sincerity, owner verification, and permit inspection by the State Transport Admin Portal. Detailed fleet controls and conductor app login remain locked until verified.',
+                        'This vehicle is pending sincerity, owner verification, and permit inspection by the EnRoute Operations Portal. Detailed fleet controls and conductor app login remain locked until verified.',
                         style: TextStyle(fontSize: 11, color: isDark ? Colors.amber.shade100 : Colors.brown.shade800),
                       ),
                     ],
@@ -1083,7 +1095,7 @@ class _OwnerBusListTabState extends State<OwnerBusListTab> {
                           if (updated != null && !updated.isWaitingForVerification) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('🎉 Bus ${bus.busName} (${bus.regNumber}) has been APPROVED by State Transport Admin! Full access unlocked.'),
+                                content: Text('🎉 Bus ${bus.busName} (${bus.regNumber}) has been APPROVED by EnRoute Fleet Operations! Full access unlocked.'),
                                 backgroundColor: AppTheme.primaryGreen,
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -1091,7 +1103,7 @@ class _OwnerBusListTabState extends State<OwnerBusListTab> {
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Verification in progress. Awaiting State Transport Admin approval at official MVD portal.'),
+                                content: Text('Verification in progress. Awaiting EnRoute Fleet Operations approval.'),
                                 backgroundColor: Colors.amber,
                                 behavior: SnackBarBehavior.floating,
                               ),

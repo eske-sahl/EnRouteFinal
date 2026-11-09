@@ -4,6 +4,8 @@ import '../../../theme/app_theme.dart';
 import '../../../services/fleet_state.dart';
 import '../../../widgets/app_creator_footer.dart';
 import '../../../widgets/app_settings_section.dart';
+import '../../../widgets/emergency_sos_dialog.dart';
+import '../../../widgets/lost_and_found_dialog.dart';
 
 class ConductorProfileTab extends StatefulWidget {
   final ConductorModel conductor;
@@ -269,9 +271,38 @@ class _ConductorProfileTabState extends State<ConductorProfileTab> {
                 ),
                 const Divider(height: 1),
 
-                // 4. Conductor Badge & Kerala MVD Guidelines
+                // 4. Lost & Found Reporting Desk
                 ListTile(
-                  leading: const Icon(Icons.verified_user, color: Colors.teal),
+                  leading: const Icon(Icons.luggage, color: Colors.teal),
+                  title: const Text('Lost & Found Desk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Review items left behind or mark passengers\' lost items as recovered'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () => LostAndFoundDialog.show(
+                    context,
+                    busRegNumber: widget.conductor.assignedBusReg,
+                    busName: widget.conductor.assignedBusName,
+                    contactPhone: widget.conductor.phone,
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // 5. Emergency Assistance SOS (112)
+                ListTile(
+                  leading: const Icon(Icons.emergency, color: Colors.red),
+                  title: const Text('Emergency SOS Assistance (112)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red)),
+                  subtitle: const Text('National Emergency, Kerala Women Helpline & MVD Desk'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () => EmergencySosDialog.show(
+                    context,
+                    busRegNumber: widget.conductor.assignedBusReg,
+                    busName: widget.conductor.assignedBusName,
+                  ),
+                ),
+                const Divider(height: 1),
+
+                // 6. Conductor Badge & Kerala MVD Guidelines
+                ListTile(
+                  leading: const Icon(Icons.verified_user, color: Colors.blueGrey),
                   title: const Text('MVD Kerala Conductor Guidelines', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   subtitle: const Text('Uniform badge, student concessions & spot ticketing norms'),
                   trailing: const Icon(Icons.chevron_right, color: Colors.grey),

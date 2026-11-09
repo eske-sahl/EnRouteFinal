@@ -9,10 +9,10 @@ async function main() {
 
   // 1. Create Super Admin
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@smartbus.kerala.gov.in' },
+    where: { email: 'admin@enroute.transit' },
     update: {},
     create: {
-      email: 'admin@smartbus.kerala.gov.in',
+      email: 'admin@enroute.transit',
       passwordHash: defaultPasswordHash,
       fullName: 'Kerala Transport Admin',
       phoneNumber: '9847000001',

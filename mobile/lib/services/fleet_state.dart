@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color, Colors;
 import 'storage_service.dart';
 import 'api_service.dart';
+import '../models/bus_expense_model.dart';
+import '../models/lost_item_model.dart';
 
 int parseTimeToMinutes(String timeStr) {
   try {
@@ -383,7 +386,46 @@ class BusModel {
   String payeeName;
   bool isUpiEnabled;
 
+  // Live Bus Crowding / Occupancy (Singapore DataMall 3-Level Standard)
+  String occupancyStatus; // 'SEATS_AVAILABLE', 'STANDING_AVAILABLE', 'HEAVILY_CROWDED'
+
   bool get hasValidUpi => isUpiEnabled && upiId.trim().isNotEmpty;
+
+  String get occupancyLabel {
+    switch (occupancyStatus) {
+      case 'STANDING_AVAILABLE':
+        return 'Standing Only';
+      case 'HEAVILY_CROWDED':
+        return 'Heavily Crowded';
+      case 'SEATS_AVAILABLE':
+      default:
+        return 'Seats Available';
+    }
+  }
+
+  String get occupancyMalayalam {
+    switch (occupancyStatus) {
+      case 'STANDING_AVAILABLE':
+        return 'നിൽക്കാൻ സ്ഥലമുണ്ട്';
+      case 'HEAVILY_CROWDED':
+        return 'വളരെ തിരക്ക്';
+      case 'SEATS_AVAILABLE':
+      default:
+        return 'സീറ്റുകൾ ലഭ്യമാണ്';
+    }
+  }
+
+  Color get occupancyColor {
+    switch (occupancyStatus) {
+      case 'STANDING_AVAILABLE':
+        return Colors.orangeAccent;
+      case 'HEAVILY_CROWDED':
+        return Colors.redAccent;
+      case 'SEATS_AVAILABLE':
+      default:
+        return const Color(0xFF00E676);
+    }
+  }
 
   BusModel({
     required this.id,
@@ -391,6 +433,7 @@ class BusModel {
     required this.regNumber,
     required this.busName,
     required this.category,
+    this.occupancyStatus = 'SEATS_AVAILABLE',
     this.startPoint = 'Mannarkad',
     this.destPoint = 'Kozhikkode',
     required this.routeName,
@@ -574,6 +617,7 @@ class BusModel {
     'upiId': upiId,
     'payeeName': payeeName,
     'isUpiEnabled': isUpiEnabled,
+    'occupancyStatus': occupancyStatus,
   };
 
   factory BusModel.fromJson(Map<String, dynamic> json) => BusModel(
@@ -626,6 +670,7 @@ class BusModel {
     upiId: (json['upiId'] as String?) ?? '',
     payeeName: (json['payeeName'] as String?) ?? '',
     isUpiEnabled: (json['isUpiEnabled'] as bool?) ?? false,
+    occupancyStatus: (json['occupancyStatus'] as String?) ?? 'SEATS_AVAILABLE',
   );
 }
 
@@ -699,17 +744,18 @@ class BusProfitBreakdown {
   final String driverName;
   final bool isActive;
   final double grossRevenue;
-  final double fuelExpense; // 42%
-  final double crewWages; // 24%
-  final double maintenanceReserve; // 8%
-  final double roadTaxAndPermits; // 5%
-  final double totalExpenses; // 79%
-  final double netProfit; // 21%
-  final double profitMarginPercent; // 21.0%
+  final double fuelExpense; // Real or benchmark
+  final double crewWages; // Real or benchmark
+  final double maintenanceReserve; // Real or benchmark
+  final double roadTaxAndPermits; // Real or benchmark
+  final double totalExpenses;
+  final double netProfit;
+  final double profitMarginPercent;
   final int ticketsCount;
   final int tripsCount;
   final double avgTicketFare;
   final String statusBadge;
+  final bool isRecordedExpense;
 
   const BusProfitBreakdown({
     required this.busRegNumber,
@@ -731,6 +777,7 @@ class BusProfitBreakdown {
     required this.tripsCount,
     required this.avgTicketFare,
     required this.statusBadge,
+    this.isRecordedExpense = false,
   });
 }
 
@@ -754,6 +801,7 @@ class OwnerProfitReport {
   final double avgRevenuePerBus;
   final double avgRevenuePerTrip;
   final List<BusProfitBreakdown> busBreakdowns;
+  final bool hasRecordedExpenses;
 
   const OwnerProfitReport({
     required this.timeframe,
@@ -775,6 +823,7 @@ class OwnerProfitReport {
     required this.avgRevenuePerBus,
     required this.avgRevenuePerTrip,
     required this.busBreakdowns,
+    this.hasRecordedExpenses = false,
   });
 }
 
@@ -794,6 +843,10 @@ class FleetState extends ChangeNotifier {
   final List<IssuedTicketModel> issuedTickets = [];
   final List<WalletTransactionModel> walletTransactions = [];
   final List<BusReviewModel> reviews = [];
+  final List<BusExpenseRecord> _recordedExpenses = [];
+  List<BusExpenseRecord> get recordedExpenses => List.unmodifiable(_recordedExpenses);
+  final List<LostItemReport> _lostItems = [];
+  List<LostItemReport> get lostItems => List.unmodifiable(_lostItems);
 
   void _initDefaultSeedData() {
     registeredPassengers.addAll([
@@ -1139,6 +1192,8 @@ class FleetState extends ChangeNotifier {
     final savedTickets = StorageService.instance.loadList(StorageService.keyTickets);
     final savedTx = StorageService.instance.loadList(StorageService.keyTransactions);
     final savedReviews = StorageService.instance.loadList(StorageService.keyReviews);
+    final savedExpenses = StorageService.instance.loadList(StorageService.keyExpenses);
+    final savedLostItems = StorageService.instance.loadList(StorageService.keyLostItems);
 
     if (savedPassengers != null) {
       registeredPassengers.clear();
@@ -1212,6 +1267,16 @@ class FleetState extends ChangeNotifier {
       reviews.addAll(savedReviews.map((e) => BusReviewModel.fromJson(e)));
     } else {
       await _persistReviews();
+    }
+
+    if (savedExpenses != null) {
+      _recordedExpenses.clear();
+      _recordedExpenses.addAll(savedExpenses.map((e) => BusExpenseRecord.fromJson(e)));
+    }
+
+    if (savedLostItems != null) {
+      _lostItems.clear();
+      _lostItems.addAll(savedLostItems.map((e) => LostItemReport.fromJson(e)));
     }
 
     // Purge legacy demo buses and reset fake collections to real zeroes
@@ -1417,6 +1482,69 @@ class FleetState extends ChangeNotifier {
       StorageService.keyReviews,
       reviews.map((r) => r.toJson()).toList(),
     );
+  }
+
+  Future<void> _persistExpenses() async {
+    await StorageService.instance.saveList(
+      StorageService.keyExpenses,
+      _recordedExpenses.map((e) => e.toJson()).toList(),
+    );
+  }
+
+  Future<void> _persistLostItems() async {
+    await StorageService.instance.saveList(
+      StorageService.keyLostItems,
+      _lostItems.map((e) => e.toJson()).toList(),
+    );
+  }
+
+  void addExpense(BusExpenseRecord expense) {
+    _recordedExpenses.removeWhere((e) => e.id == expense.id);
+    _recordedExpenses.insert(0, expense);
+    _persistExpenses();
+    notifyListeners();
+  }
+
+  void deleteExpense(String expenseId) {
+    _recordedExpenses.removeWhere((e) => e.id == expenseId);
+    _persistExpenses();
+    notifyListeners();
+  }
+
+  List<BusExpenseRecord> getExpensesForBus(String regNumber) {
+    final clean = regNumber.replaceAll(' ', '').toUpperCase();
+    return _recordedExpenses
+        .where((e) => e.busRegNumber.replaceAll(' ', '').toUpperCase() == clean)
+        .toList();
+  }
+
+  List<BusExpenseRecord> getExpensesForOwner(String ownerId) {
+    return _recordedExpenses.where((e) => e.ownerId == ownerId).toList();
+  }
+
+  void reportLostItem(LostItemReport report) {
+    _lostItems.removeWhere((i) => i.id == report.id);
+    _lostItems.insert(0, report);
+    _persistLostItems();
+    notifyListeners();
+  }
+
+  void resolveLostItem(String id, String status, String notes) {
+    final idx = _lostItems.indexWhere((i) => i.id == id);
+    if (idx != -1) {
+      _lostItems[idx] = _lostItems[idx].copyWith(status: status, resolutionNotes: notes);
+      _persistLostItems();
+      notifyListeners();
+    }
+  }
+
+  void updateBusOccupancy(String regNumber, String occupancyStatus) {
+    final bus = getBusByReg(regNumber);
+    if (bus != null) {
+      bus.occupancyStatus = occupancyStatus;
+      _persistBuses();
+      notifyListeners();
+    }
   }
 
   // Passenger Methods
@@ -1771,10 +1899,39 @@ class FleetState extends ChangeNotifier {
       final int tickets = (busDailyTickets * multiplier).round();
       final int trips = tickets > 0 ? (tickets / 36.0).ceil() : 0;
 
-      final double fuel = gross > 0 ? gross * 0.42 : 0.0;
-      final double crew = gross > 0 ? gross * 0.24 : 0.0;
-      final double maint = gross > 0 ? gross * 0.08 : 0.0;
-      final double taxPermits = gross > 0 ? gross * 0.05 : 0.0;
+      final busExpenses = getExpensesForBus(bus.regNumber);
+      final hasRealExpenses = busExpenses.isNotEmpty;
+
+      double fuel = 0.0;
+      double crew = 0.0;
+      double maint = 0.0;
+      double taxPermits = 0.0;
+
+      if (hasRealExpenses) {
+        for (final exp in busExpenses) {
+          final catLower = exp.category.toLowerCase();
+          if (catLower.contains('diesel') || catLower.contains('fuel')) {
+            fuel += exp.amount;
+          } else if (catLower.contains('crew') || catLower.contains('batta') || catLower.contains('wage')) {
+            crew += exp.amount;
+          } else if (catLower.contains('maint') || catLower.contains('repair')) {
+            maint += exp.amount;
+          } else {
+            taxPermits += exp.amount;
+          }
+        }
+        fuel *= multiplier;
+        crew *= multiplier;
+        maint *= multiplier;
+        taxPermits *= multiplier;
+      } else {
+        // Industry benchmark slabs (fuel 42%, crew 24%, maintenance 8%, tax/permit 5%)
+        fuel = gross > 0 ? gross * 0.42 : 0.0;
+        crew = gross > 0 ? gross * 0.24 : 0.0;
+        maint = gross > 0 ? gross * 0.08 : 0.0;
+        taxPermits = gross > 0 ? gross * 0.05 : 0.0;
+      }
+
       final double totalExp = fuel + crew + maint + taxPermits;
       final double net = gross - totalExp;
       final double margin = gross > 0 ? (net / gross) * 100 : 0.0;
@@ -1785,6 +1942,8 @@ class FleetState extends ChangeNotifier {
         badge = bus.isActive ? 'RUNNING (0 FARE)' : 'DEPOT STANDBY';
       } else if (!bus.isActive) {
         badge = 'DEPOT STANDBY';
+      } else if (hasRealExpenses) {
+        badge = net >= 0 ? 'REAL NET PROFIT' : 'NET LOSS';
       } else if (margin >= 20.0) {
         badge = 'HIGH PROFIT';
       } else {
@@ -1811,6 +1970,7 @@ class FleetState extends ChangeNotifier {
         tripsCount: trips,
         avgTicketFare: avgFare,
         statusBadge: badge,
+        isRecordedExpense: hasRealExpenses,
       ));
     }
 
@@ -1852,6 +2012,7 @@ class FleetState extends ChangeNotifier {
       avgRevenuePerBus: avgRevenuePerBus,
       avgRevenuePerTrip: avgRevenuePerTrip,
       busBreakdowns: busBreakdowns,
+      hasRecordedExpenses: busBreakdowns.any((b) => b.isRecordedExpense),
     );
   }
 

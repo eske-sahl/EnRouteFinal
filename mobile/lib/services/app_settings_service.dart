@@ -102,6 +102,13 @@ class AppSettingsService extends ChangeNotifier {
     'currentStop': 'CURRENT STAGE / STOP',
     'nextStop': 'APPROACHING NEXT',
     'setManualStop': 'Set Current Stop Manually',
+    'emergencySos': 'Emergency SOS Assistance (112)',
+    'lostAndFound': 'Lost & Found Desk',
+    'seatsAvailable': 'Seats Available',
+    'standingAvailable': 'Standing Only',
+    'heavilyCrowded': 'Crowded',
+    'ruralFeeder': 'Rural Feeder / Gramavandi',
+    'logExpense': 'Log Operating Expense',
   };
 
   static const Map<String, String> _malayalamTranslations = {
@@ -134,6 +141,13 @@ class AppSettingsService extends ChangeNotifier {
     'currentStop': 'നിലവിലെ സ്റ്റോപ്പ്',
     'nextStop': 'അടുത്ത സ്റ്റോപ്പ്',
     'setManualStop': 'നിലവിലെ സ്റ്റോപ്പ് നേരിട്ട് സെറ്റ് ചെയ്യുക',
+    'emergencySos': 'അടിയന്തര സഹായം (112)',
+    'lostAndFound': 'നഷ്ടപ്പെട്ട സാധനങ്ങളുടെ ഡെസ്ക്',
+    'seatsAvailable': 'സീറ്റുകൾ ലഭ്യമാണ്',
+    'standingAvailable': 'നിൽക്കാൻ മാത്രം സ്ഥലം',
+    'heavilyCrowded': 'കൂടുതൽ തിരക്ക്',
+    'ruralFeeder': 'ഗ്രാമവണ്ടി / റൂറൽ ഫീഡർ',
+    'logExpense': 'ചിലവുകൾ രേഖപ്പെടുത്തുക',
   };
 
   // ---------------------------------------------------------------------------

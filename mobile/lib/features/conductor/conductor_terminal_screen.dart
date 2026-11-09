@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/fleet_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/upi_payment_dialog.dart';
+import '../../widgets/emergency_sos_dialog.dart';
 
 class ConductorTerminalScreen extends StatefulWidget {
   final VoidCallback onEndTrip;
@@ -215,6 +216,20 @@ class _ConductorTerminalScreenState extends State<ConductorTerminalScreen>
             Text('Bus: KL 10 AZ 4589 • Sana Line', style: TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.emergency, color: Colors.redAccent),
+            tooltip: 'Emergency SOS (112)',
+            onPressed: () {
+              final bus = FleetState.instance.getBusByReg('KL 10 AZ 4589') ?? FleetState.instance.buses.first;
+              EmergencySosDialog.show(
+                context,
+                busRegNumber: bus.regNumber,
+                busName: bus.busName,
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -267,6 +282,58 @@ class _ConductorTerminalScreenState extends State<ConductorTerminalScreen>
                       _statCol('Tickets Issued', '$_ticketsIssued'),
                       _statCol('Current Stop', _boardingStop),
                     ],
+                  ),
+                  const Divider(height: 20),
+                  // Live 3-Tier Bus Occupancy Broadcast (Audit benchmark)
+                  Builder(
+                    builder: (context) {
+                      final bus = FleetState.instance.getBusByReg('KL 10 AZ 4589') ?? FleetState.instance.buses.first;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.people_alt_outlined, size: 16, color: AppTheme.primaryGreen),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Live Passenger Load:',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: bus.occupancyColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  bus.occupancyLabel,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: bus.occupancyColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _occupancyChoiceChip(bus, 'SEATS_AVAILABLE', 'Seats Available', Colors.green),
+                              const SizedBox(width: 6),
+                              _occupancyChoiceChip(bus, 'STANDING_AVAILABLE', 'Standing Only', Colors.orange),
+                              const SizedBox(width: 6),
+                              _occupancyChoiceChip(bus, 'HEAVILY_CROWDED', 'Crowded', Colors.red),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -537,6 +604,40 @@ class _ConductorTerminalScreenState extends State<ConductorTerminalScreen>
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _occupancyChoiceChip(BusModel bus, String status, String label, Color color) {
+    final isSelected = bus.occupancyStatus == status;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          FleetState.instance.updateBusOccupancy(bus.regNumber, status);
+          setState(() {});
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.18) : Colors.grey.shade100,
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? color : Colors.black87,
             ),
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/fleet_state.dart';
 import '../../../widgets/app_creator_footer.dart';
+import '../../../models/bus_expense_model.dart';
 
 class OwnerFinancialsTab extends StatefulWidget {
   final OwnerModel owner;
@@ -63,6 +64,154 @@ class _OwnerFinancialsTabState extends State<OwnerFinancialsTab> {
         backgroundColor: AppTheme.primaryGreen,
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  void _showAddExpenseDialog() {
+    final ownerBuses = FleetState.instance.getBusesForOwner(widget.owner.id);
+    if (ownerBuses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please register a bus first before logging operational expenses.')),
+      );
+      return;
+    }
+
+    String selectedBus = ownerBuses.first.regNumber;
+    String selectedCategory = 'Diesel / Fuel';
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+
+    final categories = [
+      'Diesel / Fuel',
+      'Crew Batta / Wages',
+      'Vehicle Maintenance',
+      'Permit, Tax & Toll',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Log Daily Operating Expense',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Record real diesel, crew batta or maintenance costs to compute authentic net profit.',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedBus,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Bus',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ownerBuses.map((b) => DropdownMenuItem(value: b.regNumber, child: Text('${b.busName} (${b.regNumber})'))).toList(),
+                      onChanged: (v) => setModalState(() => selectedBus = v ?? selectedBus),
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Expense Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (v) => setModalState(() => selectedCategory = v ?? selectedCategory),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount (₹)',
+                        prefixText: '₹ ',
+                        hintText: 'e.g. 3500.00',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Optional Note / Vendor',
+                        hintText: 'e.g. Indian Oil Bunk Aluva, 38 Litres',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
+                        if (amt <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a valid expense amount greater than 0')),
+                          );
+                          return;
+                        }
+                        final record = BusExpenseRecord(
+                          id: 'EXP-${DateTime.now().millisecondsSinceEpoch}',
+                          busRegNumber: selectedBus,
+                          ownerId: widget.owner.id,
+                          category: selectedCategory,
+                          amount: amt,
+                          date: DateTime.now(),
+                          note: noteController.text.trim(),
+                        );
+                        FleetState.instance.addExpense(record);
+                        Navigator.pop(context);
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('✅ Recorded ₹${amt.toStringAsFixed(1)} for $selectedCategory on $selectedBus'),
+                            backgroundColor: AppTheme.primaryGreen,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.check),
+                      label: const Text('Save Expense Record'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -251,13 +400,31 @@ class _OwnerFinancialsTabState extends State<OwnerFinancialsTab> {
                             ],
                           ),
                         ),
-                        Text('79% Total', style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ElevatedButton.icon(
+                          onPressed: _showAddExpenseDialog,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Log Expense', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Standardized according to Kerala Stage Carriage operational norms',
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    Text(
+                      report.hasRecordedExpenses
+                          ? '🟢 Authentic Net Profit calculated from your real logged expenses.'
+                          : 'ℹ️ Standard Kerala Stage Carriage norms. Tap "+ Log Expense" to enter today\'s actual fuel & crew batta.',
+                      style: TextStyle(
+                        color: report.hasRecordedExpenses ? AppTheme.primaryGreen : Colors.grey,
+                        fontSize: 11,
+                        fontWeight: report.hasRecordedExpenses ? FontWeight.bold : FontWeight.normal,
+                      ),
                     ),
                     const SizedBox(height: 16),
 

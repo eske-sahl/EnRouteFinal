@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../services/fleet_state.dart';
 import '../../services/location_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/emergency_sos_dialog.dart';
 
 class PassengerBusTrackingScreen extends StatefulWidget {
   final BusModel bus;
@@ -255,6 +256,18 @@ class _PassengerBusTrackingScreenState extends State<PassengerBusTrackingScreen>
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.emergency, color: Colors.redAccent),
+            tooltip: 'Emergency SOS (112)',
+            onPressed: () => EmergencySosDialog.show(
+              context,
+              busRegNumber: activeBus.regNumber,
+              busName: activeBus.busName,
+              currentStop: activeBus.currentStop,
+              latitude: activeBus.currentLatitude,
+              longitude: activeBus.currentLongitude,
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Location',
             onPressed: _initPassengerLocation,
@@ -475,6 +488,17 @@ class _PassengerBusTrackingScreenState extends State<PassengerBusTrackingScreen>
                           child: Text(
                             etaText,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.brown),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: activeBus.occupancyColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            activeBus.occupancyLabel,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: activeBus.occupancyColor),
                           ),
                         ),
                       ],

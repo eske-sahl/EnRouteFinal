@@ -290,7 +290,7 @@ class PassengerAiService {
         'Watch live GPS updates inside this app during the ride',
       ],
       quickSuggestions: [
-        'Full list of SpeedWings bus timings',
+        'Full list of ${_sampleBusName()} bus timings',
         'I want to go from Aluva to Perumbavoor',
         'How to go from Kaloor to Thoppumpady',
         'What is the fare from Aluva to Kizhakkambalam?',
@@ -550,15 +550,21 @@ class PassengerAiService {
       }
 
       // Connecting Route (e.g. Aluva to Fort Kochi / Thoppumpady)
+      final allBuses = FleetState.instance.buses;
+      final bus1 = allBuses.isNotEmpty ? allBuses.first : null;
+      final bus2 = allBuses.length > 1 ? allBuses[1] : bus1;
+      final leg1BusName = bus1 != null ? '${bus1.busName} (${bus1.regNumber})' : 'Kerala Stage Carriage';
+      final leg2BusName = bus2 != null ? '${bus2.busName} (${bus2.regNumber})' : 'Connecting Route Bus';
+
       final text = StringBuffer()
         ..writeln('🔄 **Connecting Route: ${_capitalize(origin)} ➔ ${_capitalize(destination)}**')
         ..writeln('')
         ..writeln('No single direct private bus covers the entire stretch, but you have a quick 2-step connection:')
         ..writeln('')
-        ..writeln('**Leg 1**: Take **SpeedWings (KL 07 CD 4589)** or Ordinary from ${_capitalize(origin)} towards Kaloor / Menaka Junction.')
+        ..writeln('**Leg 1**: Take **$leg1BusName** or Ordinary from ${_capitalize(origin)} towards the junction hub.')
         ..writeln('• Duration: ~30-35 mins • Fare: ~₹18.00')
         ..writeln('')
-        ..writeln('**Leg 2**: From Menaka or Kaloor Stand, board **GreenCity Express (KL 07 CE 1204)** towards Thoppumpady & Fort Kochi.')
+        ..writeln('**Leg 2**: From the junction, board **$leg2BusName** towards ${_capitalize(destination)}.')
         ..writeln('• Duration: ~25 mins • Fare: ~₹14.00')
         ..writeln('')
         ..writeln('💳 **Total Estimated Fare**: `₹32.00`')
@@ -570,8 +576,8 @@ class PassengerAiService {
         isUser: false,
         timestamp: now,
         quickSuggestions: [
-          'Full list of SpeedWings bus timings',
-          'Full list of GreenCity Express timings',
+          if (bus1 != null) 'Full list of ${bus1.busName} timings',
+          if (bus2 != null && bus2 != bus1) 'Full list of ${bus2.busName} timings',
           'I don’t have any previous experience of bus journey, what should I do?',
         ],
       );
@@ -629,7 +635,7 @@ class PassengerAiService {
       timestamp: now,
       quickSuggestions: [
         'What is the fare from Aluva to Perumbavoor?',
-        'Full list of SpeedWings bus timings',
+        'Full list of ${_sampleBusName()} bus timings',
         'How do I recharge my wallet?',
       ],
       quickActions: [
@@ -664,7 +670,7 @@ class PassengerAiService {
       isUser: false,
       timestamp: now,
       quickSuggestions: [
-        'Full list of SpeedWings bus timings',
+        'Full list of ${_sampleBusName()} bus timings',
         'Which buses are running right now?',
         'I want to go from Aluva to Perumbavoor',
       ],
@@ -701,7 +707,7 @@ class PassengerAiService {
       quickSuggestions: [
         'Recharge ₹100 to wallet',
         'What is the fare from Aluva to Perumbavoor?',
-        'Full list of SpeedWings bus timings',
+        'Full list of ${_sampleBusName()} bus timings',
       ],
       quickActions: [
         AiQuickAction(label: 'Recharge Now', icon: Icons.account_balance_wallet, query: 'Top up wallet'),
@@ -722,10 +728,9 @@ class PassengerAiService {
       ..writeln('• **Ambulance**: `108`')
       ..writeln('')
       ..writeln('🚌 **Fleet Operators Contacts**:')
-      ..writeln('• St. George Motors Control Room: `+91 94470 12345`')
-      ..writeln('• Conductor Suresh Kumar: `+91 98470 11001`')
+      ..writeln('• Registered Fleet Control Desk & Conductor In-App Calling')
       ..writeln('')
-      ..writeln('📝 *You can also report any issue directly through Profile ➔ Report Issue in this app.*');
+      ..writeln('📝 *You can also report any issue directly through Profile ➔ Lost & Found Desk or Emergency SOS.*');
 
     return AiMessage(
       id: id,
@@ -733,13 +738,14 @@ class PassengerAiService {
       isUser: false,
       timestamp: now,
       quickSuggestions: [
-        'Full list of SpeedWings bus timings',
+        'Full list of ${_sampleBusName()} bus timings',
         'Which buses are running right now?',
       ],
     );
   }
 
   AiMessage _buildGeneralFallbackResponse(String id, DateTime now, String rawQuery, PassengerModel? passenger) {
+    final sampleName = _sampleBusName();
     final text = StringBuffer()
       ..writeln('🤖 **EnRoute Transit AI Assistant**')
       ..writeln('')
@@ -747,7 +753,7 @@ class PassengerAiService {
       ..writeln('Here is what you can ask me:')
       ..writeln('')
       ..writeln('🕒 **Bus Timings & Schedules**')
-      ..writeln('• *"I want full list of SpeedWings bus timings"*\n• *"GreenCity Express schedule"*\n• *"When does City Rider reach InfoPark?"*')
+      ..writeln('• *"I want full list of $sampleName bus timings"*\n• *"Which buses are running right now?"*\n• *"When does the next bus arrive?"*')
       ..writeln('')
       ..writeln('🗺️ **Journey Planning**')
       ..writeln('• *"I want to go from Aluva to Perumbavoor, what should I do?"*\n• *"How to reach Kakkanad from Vytilla?"*')
@@ -766,12 +772,18 @@ class PassengerAiService {
       isUser: false,
       timestamp: now,
       quickSuggestions: [
-        'Full list of SpeedWings bus timings',
+        'Full list of $sampleName bus timings',
         'I want to go from Aluva to Perumbavoor, what should I do?',
         'I don’t have any previous experience of bus journey, what should I do?',
         'Which buses are running right now?',
       ],
     );
+  }
+
+  String _sampleBusName() {
+    final buses = FleetState.instance.buses;
+    if (buses.isNotEmpty) return buses.first.busName;
+    return 'Sana';
   }
 
   String _capitalize(String s) {

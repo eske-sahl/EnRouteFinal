@@ -4,6 +4,8 @@ import '../../../theme/app_theme.dart';
 import '../../../services/fleet_state.dart';
 import '../../../widgets/app_creator_footer.dart';
 import '../../../widgets/app_settings_section.dart';
+import '../../../widgets/emergency_sos_dialog.dart';
+import '../../../widgets/lost_and_found_dialog.dart';
 
 class ProfileTab extends StatefulWidget {
   final PassengerModel passenger;
@@ -87,6 +89,55 @@ class _ProfileTabState extends State<ProfileTab> {
                 _infoTile(Icons.school, 'Concession Category', widget.passenger.concessionCategory),
                 const Divider(height: 1),
                 _infoTile(Icons.calendar_today, 'Registered Since', DateFormat('MMMM yyyy').format(widget.passenger.registeredAt)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Passenger Safety & Transit Utilities Section
+          const Text('Safety & Passenger Assistance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 10),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.emergency, color: Colors.red, size: 22),
+                  ),
+                  title: const Text('Emergency SOS Assistance (112)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('National Emergency, Kerala Women Helpline (1091) & MVD Desk', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
+                  onTap: () => EmergencySosDialog.show(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.luggage, color: Colors.teal, size: 22),
+                  ),
+                  title: const Text('Lost & Found Desk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Report lost belongings or browse items recovered on buses', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  trailing: const Icon(Icons.chevron_right, size: 20),
+                  onTap: () => LostAndFoundDialog.show(
+                    context,
+                    passengerId: widget.passenger.id,
+                    passengerName: widget.passenger.name,
+                    contactPhone: widget.passenger.phone,
+                  ),
+                ),
               ],
             ),
           ),

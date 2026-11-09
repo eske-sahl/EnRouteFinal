@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final newOwner = FleetState.instance.registerOwner(
           name: name,
-          email: identifier.contains('@') ? identifier : '$phone@enroute.kerala.gov.in',
+          email: identifier.contains('@') ? identifier : '$phone@enroute.transit',
           phone: phone,
           password: password,
           companyName: company,
@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final newPassenger = FleetState.instance.registerPassenger(
         name: name,
         phone: phone,
-        email: identifier.contains('@') ? identifier : '$phone@enroute.kerala.gov.in',
+        email: identifier.contains('@') ? identifier : '$phone@enroute.transit',
         password: password,
       );
 

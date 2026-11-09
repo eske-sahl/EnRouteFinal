@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/fleet_state.dart';
+import '../../widgets/emergency_sos_dialog.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/search_tab.dart';
 import 'tabs/wallet_tab.dart';
@@ -131,6 +132,11 @@ class _PassengerPortalState extends State<PassengerPortal> {
                 ],
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.emergency, color: Colors.redAccent),
+                  tooltip: 'Emergency SOS (112)',
+                  onPressed: () => EmergencySosDialog.show(context),
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout),
                   tooltip: 'Sign Out',

@@ -84,6 +84,8 @@ class _BusDetailPageState extends State<BusDetailPage> {
       return const Color(0xFFC62828);
     } else if (category.contains('Blue') || category.contains('Ordinary')) {
       return const Color(0xFF1565C0);
+    } else if (category.contains('Yellow') || category.contains('Rural') || category.contains('Gramavandi')) {
+      return const Color(0xFFF57F17);
     } else {
       return const Color(0xFF2E7D32);
     }
@@ -491,6 +493,16 @@ class _BusDetailPageState extends State<BusDetailPage> {
                               Icon(Icons.circle, color: Color(0xFF2E7D32), size: 14),
                               SizedBox(width: 8),
                               Text('City Bus (Green-Whiteline)', style: TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Rural Feeder / Gramavandi (Yellow-Whiteline)',
+                          child: Row(
+                            children: [
+                              Icon(Icons.circle, color: Color(0xFFF57F17), size: 14),
+                              SizedBox(width: 8),
+                              Text('Rural Feeder / Gramavandi (Yellow-Whiteline)', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),

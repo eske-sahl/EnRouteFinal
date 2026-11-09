@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/fleet_state.dart';
+import '../../../services/qr_security_service.dart';
 
 class PassengerQrScannerDialog extends StatefulWidget {
   final Function(PassengerModel passenger) onPassengerDetected;
@@ -19,6 +20,7 @@ class PassengerQrScannerDialog extends StatefulWidget {
 class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> with SingleTickerProviderStateMixin {
   late MobileScannerController _controller;
   late AnimationController _animController;
+  final TextEditingController _manualInputController = TextEditingController();
   bool _hasProcessed = false;
   final bool _cameraError = false;
   final String _errorMessage = '';
@@ -39,6 +41,7 @@ class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> wit
 
   @override
   void dispose() {
+    _manualInputController.dispose();
     _animController.dispose();
     try {
       _controller.dispose();
@@ -52,34 +55,38 @@ class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> wit
     for (final barcode in capture.barcodes) {
       final rawValue = barcode.rawValue ?? barcode.displayValue;
       if (rawValue != null && rawValue.trim().isNotEmpty) {
-        final passenger = _resolvePassengerFromQr(rawValue.trim());
+        final verification = QrSecurityService.instance.verifyPassengerQr(rawValue.trim());
+        if (!verification.isValid) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(verification.errorMessage ?? 'Invalid QR code signature.'),
+                backgroundColor: Colors.redAccent,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
+        final passenger = FleetState.instance.findPassengerByIdOrPhone(verification.passengerId ?? '');
         if (passenger != null) {
           _hasProcessed = true;
           Navigator.of(context).pop();
           widget.onPassengerDetected(passenger);
           return;
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Passenger ID ${verification.passengerId} not found in database.'),
+                backgroundColor: Colors.orangeAccent,
+              ),
+            );
+          }
         }
       }
     }
-  }
-
-  PassengerModel? _resolvePassengerFromQr(String raw) {
-    String cleanId = raw.trim();
-
-    // Check if format is SMARTBUS:PASSENGER:SBK-KL-XXXXXX
-    if (cleanId.toUpperCase().contains('SMARTBUS:PASSENGER:')) {
-      cleanId = cleanId.replaceAll(RegExp(r'SMARTBUS:PASSENGER:', caseSensitive: false), '').trim();
-    } else if (cleanId.startsWith('{') && cleanId.contains('id')) {
-      // Check if JSON format
-      try {
-        final parsed = jsonDecode(cleanId);
-        if (parsed is Map && parsed['id'] != null) {
-          cleanId = parsed['id'].toString().trim();
-        }
-      } catch (_) {}
-    }
-
-    return FleetState.instance.findPassengerByIdOrPhone(cleanId);
   }
 
   @override
@@ -256,7 +263,7 @@ class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> wit
               ),
             ),
 
-            // Quick Fallback Selector for Browsers without physical webcam
+            // Privacy-compliant manual passenger lookup (DPDP compliant: no browsable passenger listing)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
@@ -269,28 +276,73 @@ class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> wit
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Quick Test Simulation / Backup Selection:',
+                    'Manual Passenger ID / Phone Lookup:',
                     style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: FleetState.instance.registeredPassengers.map((p) {
-                      return ActionChip(
-                        avatar: CircleAvatar(
-                          backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
-                          child: const Icon(Icons.person, size: 12, color: AppTheme.primaryGreen),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _manualInputController,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: 'Enter ID (SBK-KL-...) or 10-digit Phone',
+                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                            prefixIcon: const Icon(Icons.person_search, color: AppTheme.primaryGreen, size: 20),
+                            filled: true,
+                            fillColor: Colors.white10,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onSubmitted: (val) {
+                            final query = val.trim();
+                            if (query.isEmpty) return;
+                            final p = FleetState.instance.findPassengerByIdOrPhone(query);
+                            if (p != null) {
+                              Navigator.of(context).pop();
+                              widget.onPassengerDetected(p);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('No passenger found matching "$query"'),
+                                  backgroundColor: Colors.orangeAccent,
+                                ),
+                              );
+                            }
+                          },
                         ),
-                        label: Text('${p.name} (${p.id})', style: const TextStyle(fontSize: 11, color: Colors.white)),
-                        backgroundColor: Colors.white10,
-                        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                         onPressed: () {
-                          Navigator.of(context).pop();
-                          widget.onPassengerDetected(p);
+                          final query = _manualInputController.text.trim();
+                          if (query.isEmpty) return;
+                          final p = FleetState.instance.findPassengerByIdOrPhone(query);
+                          if (p != null) {
+                            Navigator.of(context).pop();
+                            widget.onPassengerDetected(p);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('No passenger found matching "$query"'),
+                                backgroundColor: Colors.orangeAccent,
+                              ),
+                            );
+                          }
                         },
-                      );
-                    }).toList(),
+                        child: const Text('Lookup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -323,7 +375,7 @@ class _PassengerQrScannerDialogState extends State<PassengerQrScannerDialog> wit
           ),
           const SizedBox(height: 16),
           const Text(
-            'Select any passenger below to connect instantly:',
+            'Use the manual lookup below to find passenger by ID or Phone:',
             style: TextStyle(color: Colors.greenAccent, fontSize: 12),
           ),
         ],

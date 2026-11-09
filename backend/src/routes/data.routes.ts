@@ -742,7 +742,7 @@ router.post('/buses/:regNumber/verify', (req: Request, res: Response) => {
   saveState(data);
   res.status(200).json({
     status: 'success',
-    message: `Bus ${cleanReg} verified and authorized for public service by State Transport Admin`,
+    message: `Bus ${cleanReg} verified and authorized for public service by EnRoute Fleet Operations`,
     data: data.buses[idx],
   });
 });
@@ -762,7 +762,7 @@ router.post('/buses/:regNumber/reject', (req: Request, res: Response) => {
   saveState(data);
   res.status(200).json({
     status: 'success',
-    message: `Bus ${cleanReg} rejected by State Transport Admin`,
+    message: `Bus ${cleanReg} rejected by EnRoute Fleet Operations`,
     data: data.buses[idx],
   });
 });

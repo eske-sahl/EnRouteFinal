@@ -1,12 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/fleet_state.dart';
+import '../../../services/qr_security_service.dart';
 import '../../../widgets/app_creator_footer.dart';
 import '../../../widgets/upi_payment_dialog.dart';
 
-class DashboardTab extends StatelessWidget {
+class DashboardTab extends StatefulWidget {
   final PassengerModel passenger;
   final Function(double) onTopUp;
   final VoidCallback? onViewAllTickets;
@@ -17,6 +19,42 @@ class DashboardTab extends StatelessWidget {
     required this.onTopUp,
     this.onViewAllTickets,
   });
+
+  @override
+  State<DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends State<DashboardTab> {
+  Timer? _rotationTimer;
+  int _secondsLeft = 60;
+  late String _currentSignedQr;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshQr();
+    _rotationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_secondsLeft <= 1) {
+          _refreshQr();
+        } else {
+          _secondsLeft--;
+        }
+      });
+    });
+  }
+
+  void _refreshQr() {
+    _secondsLeft = 60;
+    _currentSignedQr = QrSecurityService.instance.generateSignedPassengerQr(widget.passenger.id);
+  }
+
+  @override
+  void dispose() {
+    _rotationTimer?.cancel();
+    super.dispose();
+  }
 
   void _showTopUpSheet(BuildContext context) {
     showModalBottomSheet(
@@ -51,10 +89,10 @@ class DashboardTab extends StatelessWidget {
                         amount: amt,
                         title: 'UPI Wallet Recharge',
                         subtitle: 'Payee: ${UpiPaymentDialog.payeeName} (EnRoute Wallet)',
-                        transactionNote: 'EnRoute Wallet Recharge for ${passenger.name}',
+                        transactionNote: 'EnRoute Wallet Recharge for ${widget.passenger.name}',
                         confirmButtonText: 'I Have Paid • Credit ₹${amt.toInt()}',
                         onPaymentConfirmed: () {
-                          onTopUp(amt);
+                          widget.onTopUp(amt);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Row(
@@ -87,43 +125,62 @@ class DashboardTab extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Passenger Identity Pass', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Text('${passenger.name} • ${passenger.concessionCategory}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
-                  ),
-                  child: QrImageView(
-                    data: passenger.id,
-                    version: QrVersions.auto,
-                    size: 220.0,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
-                    dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
-                  ),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Passenger Identity Pass', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text('${widget.passenger.name} • ${widget.passenger.concessionCategory}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.5), width: 2),
+                      ),
+                      child: QrImageView(
+                        data: _currentSignedQr,
+                        version: QrVersions.auto,
+                        size: 220.0,
+                        backgroundColor: Colors.white,
+                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.shield, size: 14, color: AppTheme.primaryGreen),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Dynamic Rotating Pass (${_secondsLeft}s left)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.primaryGreen),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Cryptographically signed • Screenshots expire automatically',
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close', style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text('ID: ${passenger.id}', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close', style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -266,7 +323,7 @@ class DashboardTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
     // Fetch ONLY tickets issued for this specific passenger
-    final issuedTickets = FleetState.instance.getTicketsForPassenger(passenger.id);
+    final issuedTickets = FleetState.instance.getTicketsForPassenger(widget.passenger.id);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -307,7 +364,7 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  currency.format(passenger.walletBalance),
+                  currency.format(widget.passenger.walletBalance),
                   style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 18),
@@ -343,7 +400,7 @@ class DashboardTab extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 2. Personal Scanner / QR Code Card
+          // 2. Personal Scanner / Dynamic Cryptographic QR Code Card
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             child: Padding(
@@ -353,14 +410,37 @@ class DashboardTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Personal Digital Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('Conductor scans this to issue tickets', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              children: [
+                                const Text('Personal Digital Pass', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${_secondsLeft}s',
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Text('Dynamic rotating token • Defeats screenshots',
+                                maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey, fontSize: 11)),
                           ],
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: AppTheme.primaryGreen),
+                        tooltip: 'Rotate Pass Now',
+                        onPressed: () => setState(() => _refreshQr()),
                       ),
                       IconButton(
                         icon: const Icon(Icons.fullscreen, color: AppTheme.primaryGreen),
@@ -376,11 +456,11 @@ class DashboardTab extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade300, width: 2),
+                        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.4), width: 2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: QrImageView(
-                        data: passenger.id,
+                        data: _currentSignedQr,
                         version: QrVersions.auto,
                         size: 150.0,
                         backgroundColor: Colors.white,
@@ -391,7 +471,7 @@ class DashboardTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    passenger.id,
+                    widget.passenger.id,
                     style: TextStyle(
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.bold,
@@ -413,9 +493,9 @@ class DashboardTab extends StatelessWidget {
                 child: Text('Recent Ticket History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
               ),
               const SizedBox(width: 8),
-              if (onViewAllTickets != null)
+              if (widget.onViewAllTickets != null)
                 InkWell(
-                  onTap: onViewAllTickets,
+                  onTap: widget.onViewAllTickets,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

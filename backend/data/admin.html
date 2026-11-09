@@ -566,7 +566,7 @@
             <span style="color:#00E676; font-weight:bold;">GET</span> <a href="/api/data/json" target="_blank" style="color:white; text-decoration:underline;">/api/data/json</a> - Get complete unified JSON dataset & verification summary
           </div>
           <div style="background:#0D1117; padding:12px 16px; border-radius:10px; font-family:'JetBrains Mono'; font-size:12px;">
-            <span style="color:#00E676; font-weight:bold;">POST</span> /api/data/buses/:regNumber/verify - State Transport Admin approval endpoint
+            <span style="color:#00E676; font-weight:bold;">POST</span> /api/data/buses/:regNumber/verify - EnRoute Fleet Operations approval endpoint
           </div>
           <div style="background:#0D1117; padding:12px 16px; border-radius:10px; font-family:'JetBrains Mono'; font-size:12px;">
             <span style="color:var(--danger); font-weight:bold;">POST</span> /api/data/buses/:regNumber/reject - Reject registration request
@@ -1407,7 +1407,7 @@
       try {
         const res = await fetch('/api/data/buses/' + encodeURIComponent(reg) + '/verify', { method: 'POST' });
         if (res.ok) {
-          showToast('Bus ' + reg + ' verified and approved by State Transport Admin!');
+          showToast('Bus ' + reg + ' verified and approved by EnRoute Fleet Operations!');
           closeModal('modal-verify-bus');
           closeModal('modal-view-bus');
           setTimeout(() => location.reload(), 600);
